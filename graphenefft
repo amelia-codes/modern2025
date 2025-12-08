@@ -1,0 +1,46 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+#constants
+a = 0.246 #nm double check and need citation
+r = 0.142 #nm double check and need citation
+num_points=.07
+
+
+#size of grid
+x = np.arange(-1,1+num_points,num_points) #makes square grid change if not good size
+y = np.arange(-1,1+num_points,num_points)
+X,Y = np.meshgrid(x,y)
+#this is an array so we can add points where 6 carbon atoms are
+
+
+points = [(a/2,np.sqrt(3)*a/2),(-a/2,np.sqrt(3)*a/2),(a/2,-np.sqrt(3)*a/2),(-a/2,-np.sqrt(3)*a/2),(a,0),(-a,0)] #add more points later
+
+#aperature = np.zeros((len(x),len(y)))
+aperature = np.zeros_like(X)
+
+#if in circle around points there = 1 (dirac)
+for i in range(len(aperature)):
+    for g in range(len(aperature[i])):
+        #xcord=i
+        #ycord=g
+        xcord=X[i,g]
+        ycord=Y[i,g]
+        for j in points:
+            x2=xcord-j[0]
+            y2=ycord-j[1]
+            if (x2**2+y2**2)<r**2:
+                aperature[i,g]=1
+#fourier transform
+fft_values = np.fft.fftshift(np.fft.fft2(aperature)) #frequency?
+#print(fft_values)
+intensity = abs(fft_values)**2*num_points #?
+#print(intensity)
+#what to do with intensity?
+
+#plot
+plt.title("Fourier Transform of Graphene Lattice")
+plt.xlabel("Kx")
+plt.ylabel("Ky")
+plt.pcolormesh(intensity)
+plt.show()
