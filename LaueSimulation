@@ -1,0 +1,123 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits import mplot3d
+import itertools
+from sympy import Symbol, integrate, sin, cos
+
+
+# Constants
+a = 0.142e-9        # meters
+R0 = 1.42e-10       # meters
+Z = 6 # number of electrons per carbon atom
+
+# Lattice Basis Vectors
+a1 = np.array([1.5*a, -(np.sqrt(3)/2)*a])
+a2 = np.array([1.5*a, (np.sqrt(3)/2)*a])
+print("a1: ",a1)
+print("a2: ",a2)
+
+# Rotation Matrix
+Q = np.array([[0.0, -1.0],
+              [1.0,  0.0]])
+
+# Matrix Multiplication (correct)
+Qa2 = Q @ a2
+Qa1 = Q @ a1
+
+# Reciprocal Lattice Basis Vectors
+b1 = (2*np.pi / np.dot(a1, Qa2)) * Qa2 
+b2 = (2*np.pi / np.dot(a2, Qa1)) * Qa1
+print("b1: ",b1)
+print("b1: ",b2)
+
+magb1 = np.sqrt(b1[0]**2 + b1[1]**2)
+magb2 = np.sqrt(b2[0]**2 + b2[1]**2)
+
+# Populating Array with Linear Combo of Reciprocal Lattice Vectors
+n_range = 10
+m_range = 10
+points = []
+for n in range(n_range):
+    for m in range(m_range):
+        points.append(n*b1 + m*b2)
+        #print(points)
+
+# Unit Cell
+og_hexpoints = [(a/2,np.sqrt(3)*a/2),(-a/2,np.sqrt(3)*a/2),(a/2,-np.sqrt(3)*a/2),(-a/2,-np.sqrt(3)*a/2),(a,0),(-a,0)]
+
+array_hexvectors = [] # same as og_hexpoints but in vector form
+for point in og_hexpoints:
+    array_hexvectors.append(np.array(point))
+
+# Reciprocal Lattice Hexagon Points
+rec_point1 = np.array([magb1/2, magb1/(2 * np.sqrt(3))])
+rec_point2 = np.array([magb1/2, -magb1/(2 * np.sqrt(3))])
+rec_hexpoints = []
+for point in points:
+    rec_hexpoints.append(point + rec_point1)
+    rec_hexpoints.append(point + rec_point2)
+
+# Splitting into X and Y Coordinates
+xCoord = []
+yCoord = []
+for point in points:
+    xCoord.append(point[0])
+    yCoord.append(point[1])
+
+xRecCoord = []
+yRecCoord = []
+for rec_point in rec_hexpoints:
+    xRecCoord.append(rec_point[0])
+    yRecCoord.append(rec_point[1])
+    
+#plt.scatter(xCoord,yCoord)
+#plt.scatter(xRecCoord, yRecCoord)
+#plt.show()
+
+# Defining G (Set of all Integer Linear Combinations of Reciprobal Lattice Basis Vectors)
+G = np.array(points)
+
+# Calculating the approximation f_j(G) (FT of potential) at each G
+f_intensity = []
+for num in range(len(G)):
+    vector = G[num]
+    vector_mag_R0 = np.sqrt((R0 * vector[0]) ** 2 + (R0 * vector[1]) ** 2)
+    x_f = abs(vector_mag_R0)
+    f = 3*Z*((sin(x_f) - cos(abs(x_f)))/ x_f**3)
+    f_intensity.append(f * 10 ** 13)
+
+f_intensity[0] = 10**10 # principle beam was getting infinity at this point
+f_intensity = np.array(f_intensity)
+
+# Actually Plotting the Intensity: Meshgrid
+
+# goal: put the intensity at each point of the meshgrid
+
+#X, Y = np.meshgrid(xCoord, yCoord)
+spacing = 1 * 10**-11
+#size of grid
+x = np.arange(-1,1+spacing,spacing) #makes square grid change if not good size
+y = np.arange(-1,1+spacing,spacing)
+X,Y = np.meshgrid(x,y)
+
+x_lattice = np.zeros_like(X) # why use this?? -> to loop over size wihtout indexing on? what happened to Y?
+
+
+for i in range(len(x_lattice)):
+    for g in range(len(x_lattice[i])):
+        #xcord=i
+        #ycord=g
+        x_pt = X[i,g]
+        y_pt = Y[i,g]
+        for point in points:
+            if (x_pt, y_pt) == point:
+                vector = np.array(point) # the linear combination (one of G) of reciprocal lattice basis vectors that made that point
+                vector_mag_R0 = np.sqrt((R0 * vector[0]) ** 2 + (R0 * vector[1]) ** 2)
+                x_f = abs(vector_mag_R0)
+                f = 3*Z*((sin(x_f) - cos(abs(x_f)))/ x_f**3)
+                f_intensity = f * 10 ** 13
+                x_lattice[i,g] = f_intensity
+
+plt.pcolormesh(x_lattice)
+plt.show()
+                
